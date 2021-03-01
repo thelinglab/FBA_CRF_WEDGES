@@ -1,7 +1,8 @@
-function FBA_CRF_Ori
+function FBA_CRF_WEDGES
 % FBA_CRF (516 TRs, ~ 9 mins including before trigger is sent)
-% Task: report how many gratings of cued orientation are present (0,1,2),
-% gratings of uncued orientation are irrelevant.
+% Task: On each trial, the observer is cued to the upper or lower stimulus 
+% on the relevant side of the display. Report how many perturbations of 
+% spatial frequency occur in cued stimulus (0,1,2),
 %
 % Joshua J. Foster
 % jjfoster@bu.edu
