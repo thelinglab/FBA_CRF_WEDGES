@@ -285,23 +285,23 @@ probe_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & abs(a
 if p.probeSide == 1
     probe_aperture = fliplr(probe_aperture);
 end
-% probe_aperture = imgaussfilt(probe_aperture,p.rolloffSD);
+probe_aperture = imgaussfilt(probe_aperture,p.rolloffSD);
 
 % upper aperture
 upper_aperture = zeros(p.stimSize,p.stimSize);
-upper_aperture(eccen >= p.attendedInnerEdge & eccen <= p.gratingOuterEdge & Yc < -p.gapSize/2 & ang > -p.gratingOuterAng) = 1;
+upper_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & Yc < -p.gapSize/2 & ang > -p.gratingOuterAng) = 1;
 if p.probeSide == 2
      upper_aperture = fliplr(upper_aperture); 
 end
-% upper_aperture = imgaussfilt(upper_aperture,p.rolloffSD);
+upper_aperture = imgaussfilt(upper_aperture,p.rolloffSD);
 
 % lower aperture
 lower_aperture = zeros(p.stimSize,p.stimSize);
-lower_aperture(eccen >= p.attendedInnerEdge & eccen <= p.gratingOuterEdge & Yc > p.gapSize/2 & ang < p.gratingOuterAng) = 1;
+lower_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & Yc > p.gapSize/2 & ang < p.gratingOuterAng) = 1;
 if p.probeSide == 2
      lower_aperture = fliplr(lower_aperture); 
 end
-% lower_aperture = imgaussfilt(lower_aperture,p.rolloffSD);
+lower_aperture = imgaussfilt(lower_aperture,p.rolloffSD);
 
 tic
 for s=1:p.numPhaseSteps
