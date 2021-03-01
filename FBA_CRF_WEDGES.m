@@ -51,14 +51,14 @@ if ~exist(data_dir,'dir')
     mkdir(data_dir);
 end
 
-% practice run
+% staircase run
 if p.runType == 0
-    fName = [data_dir,num2str(p.subID),'_FBA_CRF_GratingPilot_Practice',num2str(p.runNum),'.mat'];
+    fName = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Staircase',num2str(p.runNum),'.mat'];
 end
 
 % scanner run
 if p.runType == 1
-    fName = [data_dir,num2str(p.subID),'_FBA_CRF_GratingPilot_Run',num2str(p.runNum),'.mat'];
+    fName = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Run',num2str(p.runNum),'.mat'];
 end
 
 % check that no such data file already exists
@@ -549,10 +549,10 @@ end
 if p.eyeTrack == 1
     
     if p.runType == 0
-        edfFileFinal = [num2str(p.subID),'_FBA_CRF_GratingPilot_Practice',num2str(p.runNum),'.edf'];
+        edfFileFinal = [num2str(p.subID),'_FBA_CRF_WEDGES_Staircase',num2str(p.runNum),'.edf'];
     end
     if p.runType == 1
-        edfFileFinal = [num2str(p.subID),'_FBA_CRF_GratingPilot_Run',num2str(p.runNum),'.edf'];
+        edfFileFinal = [num2str(p.subID),'_FBA_CRF_WEDGES_Run',num2str(p.runNum),'.edf'];
     end
     
     edf_filename = 'tmp.edf';
