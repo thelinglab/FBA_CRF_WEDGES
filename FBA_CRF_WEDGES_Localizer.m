@@ -109,15 +109,16 @@ addpath(StaircaseFunctionsDir);
 
 % stimulus dimensions
 p.fixSize = round(0.2*w.ppd);
+p.SF = 1.5; % spatial frequency
+p.gratingOuterAng = 70; % how far vertical boundaries are from horizontal meridian
+p.gratingInnerEdge = 1.0*w.ppd;
+p.gratingOuterEdge = 8.5*w.ppd;
+p.gapSize = 0.5*w.ppd; % size of gap between gratings on attended side
+p.rolloffSD = 0.1*w.ppd;
 p.eyeBoxSize = round(2.5*w.ppd);
 p.fontSize = 40;
-p.petalGauss = 1;                   % toggle gaussian roll-off of petal gratings, (for checking positioning)
-p.freq = 0.4477;                    % "Baseline" spatial frequency of the grating in cycles per degree
 p.numPhaseSteps = 90;               % number of steps between 0 and 360 degrees, more increases load time
-p.Eccen=(10.^(linspace(log10(1.8),log10(14),5)))./2;      % Initial eccentricity (closest to fovea) around which gratings will be displayed
-p.posAngle = 45;                    % degrees, position of first grating on eccen ring
-p.numGratings = 8;                  % number of gratings (petals) per eccen ring
-p.probeOris = [0 90];
+p.ori = 90;
 
 
 % Timing
@@ -181,113 +182,80 @@ p.bgRect = p.sRect; % background rect
 p.eyeRect = CenterRectOnPoint([0 0 p.eyeBoxSize p.eyeBoxSize],p.xCenter,p.yCenter); % bounding box for eye position
 p.fixRect = CenterRect([0 0 p.fixSize p.fixSize],p.bgRect); 
 
-%% MAKE STIMULI
-rect = p.sRect;
-
-p.numEccen=length(p.Eccen);
-% Cortical Mag
-[x,y] = meshgrid(-rect(3)/2:(rect(3)/2)-1,-rect(4)/2:(rect(4)/2)-1);
-radius_concentric =(sqrt(x.^2+y.^2));
-radius_concentric=radius_concentric./w.ppd; % change to units of degrees
-p.max_visDegree=max(max(radius_concentric));
-% Polimeni et al. 2006
-% A-Monopole model (derivative), from Wedge-Dipole model
-alpha=0.7; % degrees
-kappa=15; % aka k param
-Mag=kappa./(radius_concentric + alpha);
-magSF=kappa./(p.Eccen + alpha);
-p.magSF=magSF;
+%% make probe gratings
 
 % set up phase values
 lin=linspace(0,1,(p.numPhaseSteps+1));
-p.ProbePhaseSteps=lin(1:(end-1))*2*pi;
+p.phaseSteps=lin(1:(end-1))*2*pi;
 
-% Generate Petal Stimuli
-pos_angles=ones(p.numGratings,p.numEccen); % initialize matrix containing angles of gratings
+p.stimSize = round2even(2*p.gratingOuterEdge + 4*p.rolloffSD); % allow 2x rolloffSD for each side
+p.leftRect = CenterRectOnPoint([0 0 p.stimSize/2 p.stimSize+1], p.xCenter - p.stimSize/4, p.yCenter);
+p.rightRect = CenterRectOnPoint([0 0 p.stimSize/2 p.stimSize+1], p.xCenter + p.stimSize/4, p.yCenter);
+if p.probeSide == 1
+    p.probeRect = p.leftRect;
+    p.attRect = p.rightRect;
+else
+    p.probeRect = p.rightRect;
+    p.attRect = p.leftRect;
+end
 
-% setup position angles.
-for eccen = 1:p.numEccen
-    if mod(eccen,2) == 1
-        pos_angles(:,eccen) = 22.5+[0:45:315]';
-    else
-        pos_angles(:,eccen) = 0:45:315';
+[Xc,Yc] = meshgrid(1:(p.stimSize/2), (-p.stimSize/2):(p.stimSize/2));
+eccen = sqrt((Yc).^2+(Xc).^2);
+ang = nan(size(Xc));
+for y = 1:p.stimSize+1
+    for x = 1:p.stimSize/2
+        ang(y,x) = rad2deg(cart2pol(Xc(y,x),Yc(y,x)));
     end
 end
 
-% preallocate
-p.petalCoords{p.numEccen,p.numGratings} = nan(1,4); 
+% stim on unattended side
+probe_aperture = zeros(size(Xc));
+probe_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & abs(ang) <= p.gratingOuterAng) = 1; % hemifield
+if p.probeSide == 1
+    probe_aperture = fliplr(probe_aperture);
+end
+probe_aperture = imgaussfilt(probe_aperture,p.rolloffSD);
 
-for e=1:p.numEccen
-    % calc offset
-     p.initAngle=360/(p.numGratings+1);
-     p.gratRadius(e)=sind(p.initAngle/2)*p.Eccen(e)*2;
-     
-     
-    % calc positions
-    for ps = 1:p.numGratings
-       p.petalCoords{e,ps} =  round([p.xCenter-(cosd(pos_angles(ps,e))*p.Eccen(e)*w.ppd)-(p.gratRadius(e)*w.ppd)/2 p.yCenter-(sind(pos_angles(ps,e))*p.Eccen(e)*w.ppd)-(p.gratRadius(e)*w.ppd)/2 ...
-            p.xCenter-(cosd(pos_angles(ps,e))*p.Eccen(e)*w.ppd)+(p.gratRadius(e)*w.ppd)/2 p.yCenter-(sind(pos_angles(ps,e))*p.Eccen(e)*w.ppd)+(p.gratRadius(e)*w.ppd)/2]);
-    end
+% upper aperture
+upper_aperture = zeros(size(Xc));
+upper_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & Yc < -p.gapSize/2 & ang > -p.gratingOuterAng) = 1;
+if p.probeSide == 2
+    upper_aperture = fliplr(upper_aperture);
+end
+upper_aperture = imgaussfilt(upper_aperture,p.rolloffSD);
+
+% lower aperture
+lower_aperture = zeros(size(Xc));
+lower_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & Yc > p.gapSize/2 & ang < p.gratingOuterAng) = 1;
+if p.probeSide == 2
+    lower_aperture = fliplr(lower_aperture);
+end
+lower_aperture = imgaussfilt(lower_aperture,p.rolloffSD);
+
+tic
+for s=1:p.numPhaseSteps
     
-    p.petalSize(e) =round(p.gratRadius(e)*w.ppd);
-    % make sure probe is an even number of pixels
-    if ~mod(p.petalSize(e),2)
-        p.petalSize(e)=p.petalSize(e)+1; 
-    end
+    sinusoid = cos(2*pi*p.SF/w.ppd*(Xc.*cos(p.ori*(pi/180))+Yc.*sin(p.ori*(pi/180)))-p.phaseSteps(s));
+      
+    tmp = nan(size(Xc,1),size(Xc,2),2);
+    tmp(:,:,1) = sinusoid.*p.maxContrastRGB+p.meanLum(1);
+    tmp(:,:,2) = probe_aperture*255;
+    probeText{s} = Screen('MakeTexture',window,tmp);
+       
+    tmp = nan(size(Xc,1),size(Xc,2),2);
+    tmp(:,:,1) = sinusoid.*p.maxContrastRGB+p.meanLum(1);
+    tmp(:,:,2) = upper_aperture*255;
+    upperText{s} = Screen('MakeTexture',window,tmp);
     
-    [X,Y] = meshgrid(0:(p.petalSize(e)-1),0:(p.petalSize(e)-1));	% specify range of meshgrid
-    s.stim(e).GratingsProbe1 = NaN(p.numPhaseSteps, p.petalSize(e), p.petalSize(e));
-    s.stim(e+p.numEccen).GratingsProbe1 = NaN(p.numPhaseSteps, p.petalSize(e), p.petalSize(e));
+    tmp = nan(size(Xc,1),size(Xc,2),2);
+    tmp(:,:,1) = sinusoid.*p.maxContrastRGB+p.meanLum(1);
+    tmp(:,:,2) = lower_aperture*255;
+    lowerText{s} = Screen('MakeTexture',window,tmp);
     
-    for ori = 1:length(p.probeOris)
-        for phs=1:p.numPhaseSteps
-            % New (SF of 1 cpd = ~1cm @ 57cm viewing distance)
-            stim.sinusoids{e,ori,phs} = sin( 2*pi*p.freq*magSF(e)/w.ppd * ( Y.*sin((p.probeOris(ori))*(pi/180)) + X.*cos((p.probeOris(ori))*(pi/180)))  - p.ProbePhaseSteps(phs)); % oriented grating
-            
-        end
-    end
     
 end
 
-%% Loop through contrasts/phase steps and apply petal masks
-
-for e=1:length(p.Eccen)
-    
-    [mx, my]=meshgrid(-floor(p.petalSize(e)/2):floor(p.petalSize(e)/2), -floor(p.petalSize(e)/2):floor(p.petalSize(e)/2));
-    
-    temp_mask=sqrt(mx.^2 + my.^2);
-    c_mask=temp_mask; c_mask(temp_mask > floor(p.petalSize(e)/2.3)) = -1;
-    c_mask(c_mask >= 0) = 0; c_mask=c_mask+1;
-    
-    if p.petalGauss
-        gauss_stdev=w.ppd*p.Eccen(e)/30;
-        Gauss_mask=fspecial('gaussian',round([p.petalSize(e) p.petalSize(e)]),gauss_stdev);
-        
-        final_mask=filter2(c_mask, Gauss_mask, 'same');
-                
-        final_mask(final_mask < 0.0001)=0;
-        
-        % Calc "real" petal diameter taking guass roll-off into account
-        row_ind=round(size(final_mask,1)/2);
-        guass_petal_diam=sum(final_mask(row_ind,:) > 0.3);
-        
-    else
-        final_mask=c_mask;
-    end
-    
-    % create gabor textures
-    for ori = 1:length(p.probeOris);
-        for f=1:p.numPhaseSteps
-            tmp =(squeeze((stim.sinusoids{e,ori,f})).*final_mask).*p.maxContrastRGB+p.meanLum(1);
-            [s1,s2] = size(tmp);
-            gabor = nan(s1,s2,2);
-            gabor(:,:,1) = tmp;
-            gabor(:,:,2) = final_mask*255;
-            gaborTexture{e,ori,f} = Screen('MakeTexture',window,gabor);
-        end
-    end
-    
-end
+toc
 
 %% Determine stimulus sequence
 
