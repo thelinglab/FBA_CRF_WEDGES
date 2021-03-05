@@ -61,7 +61,7 @@ if p.scan == 0
     deviceString = 'Apple Internal Keyboard / Trackpad'; % macbook keyboard
     p.keyPressNumbers = [KbName('1!') KbName('2@')]; 
     w.refreshRate = 60;
-    w.screenWidth = 33; % scanner macbook
+    w.screenWidth = 28.6; % scanner macbook
     w.vDist = 57; % viewing distance
     w.screenWidthPixels = 1400;
     w.screenHeightPixels = 900; % scanner macbook
