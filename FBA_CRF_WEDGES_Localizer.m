@@ -39,12 +39,12 @@ end
 
 % demo run
 if p.runType == 0
-    fName = [data_dir,num2str(p.subID),'_FBA_CRF_Ori_Localizer_Demo',num2str(p.runNum),'.mat'];
+    fName = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Localizer_Demo',num2str(p.runNum),'.mat'];
 end
 
 % scanner run
 if p.runType == 1
-    fName = [data_dir,num2str(p.subID),'_FBA_CRF_Ori_Localizer_Run',num2str(p.runNum),'.mat'];
+    fName = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Localizer_Run',num2str(p.runNum),'.mat'];
 end
 
 % check that no such data file already exists
@@ -349,10 +349,10 @@ end
 if p.eyeTrack == 1
     
     if p.runType == 0 % demo run
-        edfFileFinal = [num2str(p.subID),'_FBA_CRF_Ori_Localizer_Demo',num2str(p.runNum),'.edf'];
+        edfFileFinal = [num2str(p.subID),'_FBA_CRF_WEDGES_Localizer_Demo',num2str(p.runNum),'.edf'];
     end
     if p.runType == 1 % regular run
-        edfFileFinal = [num2str(p.subID),'_FBA_CRF_Ori_Localizer_Run',num2str(p.runNum),'.edf'];
+        edfFileFinal = [num2str(p.subID),'_FBA_CRF_WEDGES_Localizer_Run',num2str(p.runNum),'.edf'];
     end
     
     edf_filename = 'tmp.edf';
