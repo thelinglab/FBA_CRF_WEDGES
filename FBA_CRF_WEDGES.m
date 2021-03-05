@@ -241,17 +241,13 @@ end
 %% Create stimuli
 
 % Create patches
-xCenter = w.screenWidthPixels/2; yCenter = w.screenHeightPixels/2;
+p.xCenter = w.screenWidthPixels/2; p.yCenter = w.screenHeightPixels/2;
 Screen('TextStyle', window, 1);
 Screen('TextSize', window, p.fontSize);
 bbox = Screen('TextBounds', window, 'Loading Stimuli... ');
-newRect = CenterRectOnPoint(bbox, xCenter, yCenter);
+newRect = CenterRectOnPoint(bbox, p.xCenter, p.yCenter);
 Screen('DrawText', window, 'Loading Stimuli... ', newRect(1), newRect(2), p.txtCol);
 Screen('Flip', window);
-
-% Compute and store the center of the screen
-p.xCenter = (p.sRect(3)-p.sRect(1))/2;
-p.yCenter = (p.sRect(4)-p.sRect(2))/2;
 
 % Rects
 p.bgRect = p.sRect; % background rect
@@ -260,24 +256,32 @@ p.fixRect = CenterRect([0 0 p.fixSize p.fixSize],p.bgRect);
 
 %% make probe gratings
 
-% % set up phase values
+% set up phase values
 lin=linspace(0,1,(p.numPhaseSteps+1));
 p.phaseSteps=lin(1:(end-1))*2*pi;
 
-p.stimSize = round_odd(2*p.gratingOuterEdge + 4*p.rolloffSD); % allow 2x rolloffSD for each side
-p.stimRect = CenterRect([0 0 p.stimSize p.stimSize],p.bgRect); 
+p.stimSize = round2even(2*p.gratingOuterEdge + 4*p.rolloffSD); % allow 2x rolloffSD for each side
+p.leftRect = CenterRectOnPoint([0 0 p.stimSize/2 p.stimSize+1], p.xCenter - p.stimSize/4, p.yCenter);
+p.rightRect = CenterRectOnPoint([0 0 p.stimSize/2 p.stimSize+1], p.xCenter + p.stimSize/4, p.yCenter);
+if p.probeSide == 1
+    p.probeRect = p.leftRect;
+    p.attRect = p.rightRect;
+else
+    p.probeRect = p.rightRect;
+    p.attRect = p.leftRect;
+end
 
-[Xc,Yc] = meshgrid((-p.stimSize/2):(p.stimSize/2)-1, (-p.stimSize/2):(p.stimSize/2)-1);
+[Xc,Yc] = meshgrid(1:(p.stimSize/2), (-p.stimSize/2):(p.stimSize/2));
 eccen = sqrt((Yc).^2+(Xc).^2);
 ang = nan(size(Xc));
-for y = 1:p.stimSize
-    for x = 1:p.stimSize
+for y = 1:p.stimSize+1
+    for x = 1:p.stimSize/2
         ang(y,x) = rad2deg(cart2pol(Xc(y,x),Yc(y,x)));
     end
 end
 
- % stim on unattended side
-probe_aperture = zeros(p.stimSize,p.stimSize);
+% stim on unattended side
+probe_aperture = zeros(size(Xc));
 probe_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & abs(ang) <= p.gratingOuterAng) = 1; % hemifield
 if p.probeSide == 1
     probe_aperture = fliplr(probe_aperture);
@@ -285,18 +289,18 @@ end
 probe_aperture = imgaussfilt(probe_aperture,p.rolloffSD);
 
 % upper aperture
-upper_aperture = zeros(p.stimSize,p.stimSize);
+upper_aperture = zeros(size(Xc));
 upper_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & Yc < -p.gapSize/2 & ang > -p.gratingOuterAng) = 1;
 if p.probeSide == 2
-     upper_aperture = fliplr(upper_aperture); 
+    upper_aperture = fliplr(upper_aperture);
 end
 upper_aperture = imgaussfilt(upper_aperture,p.rolloffSD);
 
 % lower aperture
-lower_aperture = zeros(p.stimSize,p.stimSize);
+lower_aperture = zeros(size(Xc));
 lower_aperture(eccen >= p.gratingInnerEdge & eccen <= p.gratingOuterEdge & Yc > p.gapSize/2 & ang < p.gratingOuterAng) = 1;
 if p.probeSide == 2
-     lower_aperture = fliplr(lower_aperture); 
+    lower_aperture = fliplr(lower_aperture);
 end
 lower_aperture = imgaussfilt(lower_aperture,p.rolloffSD);
 
@@ -307,7 +311,7 @@ for s=1:p.numPhaseSteps
     
     for c = 1:p.nContrasts
         
-        tmp = nan(p.stimSize,p.stimSize,1);
+        tmp = nan(size(Xc,1),size(Xc,2),2);
         tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(c)+p.meanLum(1);
         tmp(:,:,2) = probe_aperture*255;
         probeText{c,s} = Screen('MakeTexture',window,tmp);
@@ -318,12 +322,12 @@ for s=1:p.numPhaseSteps
         
         sinusoid = cos(2*pi*p.SF/w.ppd*(Xc.*cos(p.oris(ori)*(pi/180))+Yc.*sin(p.oris(ori)*(pi/180)))-p.phaseSteps(s));
         
-        tmp = nan(p.stimSize,p.stimSize,1);
+        tmp = nan(size(Xc,1),size(Xc,2),2);
         tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(5)+p.meanLum(1);
         tmp(:,:,2) = upper_aperture*255;
         upperText{ori,s} = Screen('MakeTexture',window,tmp);
         
-        tmp = nan(p.stimSize,p.stimSize,1);
+        tmp = nan(size(Xc,1),size(Xc,2),2);
         tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(5)+p.meanLum(1);
         tmp(:,:,2) = lower_aperture*255;
         lowerText{ori,s} = Screen('MakeTexture',window,tmp);
