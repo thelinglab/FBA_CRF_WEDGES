@@ -681,57 +681,47 @@ for t = 1:stim.nTrials
     trialFlipTimes = presTime.trialFlipTimes{t};
     topupFlipTimes = presTime.topupFlipTimes{t};
     PsychHID('KbQueueFlush',deviceNumber); % flush any response made before trial began
-        
-%     %------------------------------------------------------------------
-%     % create gratings for trial
-%     %------------------------------------------------------------------
-%     [X,Y] = meshgrid(0:(p.targSize-1),0:(p.targSize-1)); % specify range of meshgrid
-%     
-%     grating = {};
-%     grating{1,1} = sin(2*pi*p.SF/w.ppd * ( Y.*sin((p.oris(1))*(pi/180)) + X.*cos((p.oris(1))*(pi/180))) - stim.vertGratingPhase{t}(1)); % vertical 1
-%     grating{1,2} = sin( 2*pi*p.SF/w.ppd * ( Y.*sin((p.oris(1))*(pi/180)) + X.*cos((p.oris(1))*(pi/180)))  - stim.vertGratingPhase{t}(2)); % vertical 2
-%     grating{2,1} = sin(2*pi*p.SF/w.ppd * ( Y.*sin((p.oris(2))*(pi/180)) + X.*cos((p.oris(2))*(pi/180))) - stim.horzGratingPhase{t}(1)); % horizontal 1
-%     grating{2,2} = sin( 2*pi*p.SF/w.ppd * ( Y.*sin((p.oris(2))*(pi/180)) + X.*cos((p.oris(2))*(pi/180)))  - stim.horzGratingPhase{t}(2)); % horizontal 2
-%     
-%     for ori = 1:2
-%         for pos = 1:2
-%             % create each of the stimulus frames
-%             for f = 1:p.targDur_frames
-%                 stimulus = p.targContrast.*grating{ori,pos} + noise{randsample(p.nNoiseSamples,1)};
-%                 stimulus(stimulus >= 1) = 0.99; % ensure values are within acceptable range
-%                 stimulus(stimulus <= -1) = -0.99;
-%                 stimulus = (stimulus.*noise_aperture).*p.meanLum(1)+p.meanLum(1);
-%                 gratingTexture{ori,pos,f} = Screen('MakeTexture',window,stimulus);
-%             end
-%         end 
-%     end
-
-
-
-     
-% for ori = 1:2
-%     for pos = 1:2
-%         
-%         rand_phase = randsample(p.numPhaseSteps,1); % REVIEW
-%         
-%         sinusoid = cos(2*pi*0.5*p.SF/w.ppd*(Xc.*cos(p.oris(ori)*(pi/180))+Yc.*sin(p.oris(ori)*(pi/180)))-p.phaseSteps(rand_phase));
-%         
-%         tmp = nan(p.stimSize,p.stimSize,1);
-%         tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(5)+p.meanLum(1);
-%         tmp(:,:,2) = lower_aperture*255;
-%         upperText{ori,s} = Screen('MakeTexture',window,tmp);
-%         
-%         tmp = nan(p.stimSize,p.stimSize,1);
-%         tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(5)+p.meanLum(1);
-%         tmp(:,:,2) = upper_aperture*255;
-%         lowerText{ori,s} = Screen('MakeTexture',window,tmp);
-%         
-%     end
-% end
-
-
     
-    %% trial period   
+    %% make target textures for trial
+    
+    upperTarg{2} = [];
+    lowerTarg{2} = [];
+    probeTarg{2} = [];
+    
+    tic
+    
+    for targNum = 1:2
+        
+        randPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+        sinusoid = cos(2*pi*(p.SF - stim.upperDelta(t))/w.ppd*(Xc.*cos(stim.upperOri(t)*(pi/180))+Yc.*sin(stim.upperOri(t)*(pi/180)))-randPhase);
+        tmp = nan(size(Xc,1),size(Xc,2),2);
+        tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(5)+p.meanLum(1);
+        tmp(:,:,2) = upper_aperture*255;
+        upperTarg{targNum} = Screen('MakeTexture',window,tmp);
+        stim.upperTargPhase(t,targNum) = randPhase;
+        
+        randPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+        sinusoid = cos(2*pi*(p.SF - stim.lowerDelta(t))/w.ppd*(Xc.*cos(stim.lowerOri(t)*(pi/180))+Yc.*sin(stim.lowerOri(t)*(pi/180)))-randPhase);
+        tmp = nan(size(Xc,1),size(Xc,2),2);
+        tmp(:,:,1) = sinusoid.*p.meanLum(1)*stim.contrastLevels(5)+p.meanLum(1);
+        tmp(:,:,2) = lower_aperture*255;
+        lowerTarg{targNum} = Screen('MakeTexture',window,tmp);
+        stim.lowerTargPhase(t,targNum) = randPhase;
+        
+        randPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+        sinusoid = cos(2*pi*(p.SF + stim.probeDelta(t))/w.ppd*(Xc.*cos(p.probeOri*(pi/180))+Yc.*sin(p.probeOri*(pi/180)))-randPhase);
+        tmp = nan(size(Xc,1),size(Xc,2),2);
+        tmp(:,:,1) = sinusoid.*p.meanLum(1)*contrast+p.meanLum(1);
+        tmp(:,:,2) = probe_aperture*255;
+        probeTarg{targNum} = Screen('MakeTexture',window,tmp);
+        stim.probePhase(t,targNum) = randPhase;
+        
+    end
+    
+    time.makeTextures(s) = toc; % save time, so I can check that it didn't disrupt flip times
+    
+    
+    %% trial period
     
     for f = 1:p.nTrialFrames
         
