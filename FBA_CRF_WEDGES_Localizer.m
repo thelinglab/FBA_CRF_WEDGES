@@ -1,4 +1,4 @@
-function FBA_CRF_Ori_Localizer
+function FBA_CRF_WEDGES_Localizer
 % Localizer scan (272 TRs, ~5 mins including pre-scan time)
 % Task: press any key when fixation dot dims.
 %
@@ -8,11 +8,12 @@ function FBA_CRF_Ori_Localizer
 
 % general settings
 clear
-p.subID = 'S013';
-p.scan = 1; % 0 = running on laptop, 1 = running in scanner
-p.runType = 1; % 0 = demo, 1 = actual data acquisition (determines name of saved file)
+p.subID = 'S100';
+p.scan = 0; % 0 = running on laptop, 1 = running in scanner
+p.runType = 0; % 0 = demo, 1 = actual data acquisition (determines name of saved file)
 p.runNum = 1; 
-p.eyeTrack = 1;
+p.eyeTrack = 0;
+p.probeSide = 1; % 1 = irrelevant probe on left, 2 = probe on right
 
 echo off
 KbName('UnifyKeyNames')
