@@ -154,28 +154,28 @@ p.probeOri = 90; % probe is always horizontal
 % Timing
 p.refreshRate = w.refreshRate;
 p.refreshCycle = 1/p.refreshRate;
-p.frameRate = 10; % determines rate at which noise patches are updated
+p.frameRate = 10; % # of frames per second
 p.frameDur = 1/p.frameRate;
-p.framesPerPhase = 2; % update phase every 2 frames, therefore phase updated at 10 Hz 
-p.adaptDur = 10; % duration of baseline adaptation
-p.nAdaptFrames = p.adaptDur/p.frameDur; 
-p.nCueFrames = 5; % 5 = 0.5 s % REVIEW
+p.adaptDur = 60; % duration of baseline adaptation
+p.nAdaptFrames = p.adaptDur/p.frameDur;
+p.nCueFrames = 5; % 5 = 500 ms
 p.trialDur = 4;
 p.nTrialFrames = p.trialDur/p.frameDur;
 p.endBufferDur = 16;
 p.eventSeqDur = 440;
 p.runDur = p.adaptDur + p.eventSeqDur + p.endBufferDur;
 p.nFrames = p.runDur/p.frameDur;
-p.responseWindow = 4;
+p.responseWindow = 2;
+p.feedbackDur = 0.5; % for 500 ms at the end of the respose window
 
 % timing of targets
-p.targDur = 0.1; 
+p.targDur = 0.1;
 p.targDur_frames = round(p.targDur/p.frameDur);
-p.targLimits = [0.5 3.7]; % earliest and latest time grating can onset
-p.targLimits_frames = round(p.targLimits./p.frameDur); 
-p.targ2Limits = [2.8 3.7]; % same for 2nd grating (must always occur toward end of trial)
+p.targLimits = [0.7 3.7]; % earliest and latest time grating can onset
+p.targLimits_frames = round(p.targLimits./p.frameDur);
+p.targ2Limits = [3.0 3.7]; % same for 2nd grating (must always occur toward end of trial)
 p.targ2Limits_frames = round(p.targ2Limits./p.frameDur);
-p.minSOA = 0.4; % min SOA between gratings
+p.minSOA = 0.7; % min SOA between gratings
 p.minSOA_frames = round(p.minSOA/p.frameDur);
 
 % Color information
