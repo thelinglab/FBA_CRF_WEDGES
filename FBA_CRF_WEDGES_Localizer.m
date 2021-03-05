@@ -127,7 +127,6 @@ p.stimFreq = 10; % stimulation frequency
 p.frameDur = 1/p.stimFreq;
 p.blockDur = 16; 
 p.blocksPerStim = 8;
-p.oriSeq = repmat([1,2],1,p.blocksPerStim/2);
 p.cond = 2;
 p.nBlocks = p.cond*p.blocksPerStim+1; % +1 for final baseline
 p.runDur = p.blockDur*p.nBlocks; 
@@ -327,14 +326,11 @@ stim.rt = nan(1,stim.nTargs);
 % index when each stimulus is presented
 stim.framesPerBlock = p.blockDur/p.frameDur;
 stim.stimOn = []; 
-stim.ori = [];
 for b = 1:p.blocksPerStim
     tmp = [zeros(1,stim.framesPerBlock),ones(1,stim.framesPerBlock)];
     stim.stimOn = [stim.stimOn tmp]; 
-    stim.ori = [stim.ori p.oriSeq(b)*tmp];
 end
 stim.stimOn = [stim.stimOn, zeros(1,stim.framesPerBlock)]; 
-stim.ori = [stim.ori zeros(1,stim.framesPerBlock)];
 
 % mark the frames when each stimulus period starts
 stim.stimStart = zeros(size(stim.stimOn)); 
