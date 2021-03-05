@@ -8,27 +8,25 @@ function FBA_CRF_WEDGES
 % jjfoster@bu.edu
 % Boston University
 
+% issues to resolve:
+% is eye tracking approach at CNC working - do data files look okay?
+% handle eye tracking files different for staircase?
+% update viewing distance etc. for room 209?
+%
+% lower priority
+% save phase values
 
-% To do:
-% 1. add borders around the gratings on the relevant side so they're easily seggregated
-% 2. The timing of the targets can be truly independent now
-% given feedback at the end of trial? tricky because responses are quite
-% slow
-% 3. make textures half the visual field to speed up load times (lower
-% priority)
-
- clear all
+clear all
 
 p.subID = 'S100';
-p.runType = 0; % 0 = practice, 1 = actual run (just determines names of saved files)
-p.runNum = 16;
-p.surroundEccen = 2; % 1 or 2 % REVIEW
-p.probeOri = 90; % 0 = vertical, 90 = horizontal
-p.probeSide = 2; % 1 = probe on left, 2 = probe on right
-p.targModulationRGB = 6; % modulation of gratings in RGB units
-p.cueCB = 1; % 1 = pink = vertical, 2 = pink horizontal
+p.runType = 0; % 0 = staircase outside scanner, 1 = actual run (just determines names of saved files)
+p.runNum = 1;
+p.probeSide = 2; % 1 = irrelevant probe on left, 2 = probe on right
+p.cueCB = 1; % 1 = pink: attend upper, 2 = pink: attend lower
 p.eyeTrack = 0;
 p.setup = 0; % 0 = my macbook, 1 = Display++, 2 = scanner at imaging center
+p.maxDelta = 0.50;
+p.startDelta = 0.10; % pretty easy to see % REVIEW
 echo off
 KbName('UnifyKeyNames')
 Screen('Preference', 'SkipSyncTests', 1);
@@ -135,12 +133,10 @@ addpath(StaircaseFunctionsDir);
 
 % stimulus dimensions
 p.fixSize = round(0.2*w.ppd);
-p.SF = 1.5; % spatial frequency
+p.SF = 2.2; % spatial frequency
 p.gratingOuterAng = 70; % how far vertical boundaries are from horizontal meridian
-p.gratingInnerAng = 0;  % how far horizontal boundaries are from horizontal meridiam
 p.gratingInnerEdge = 1.0*w.ppd;
 p.gratingOuterEdge = 8.5*w.ppd;
-p.attendedInnerEdge = 1.0*w.ppd;
 p.gapSize = 0.5*w.ppd; % size of gap between gratings on attended side
 p.rolloffSD = 0.1*w.ppd;
 p.eyeBoxSize = round(2.5*w.ppd);
@@ -156,7 +152,7 @@ p.refreshRate = w.refreshRate;
 p.refreshCycle = 1/p.refreshRate;
 p.frameRate = 10; % # of frames per second
 p.frameDur = 1/p.frameRate;
-p.adaptDur = 60; % duration of baseline adaptation
+p.adaptDur = 5; % duration of baseline adaptation
 p.nAdaptFrames = p.adaptDur/p.frameDur;
 p.nCueFrames = 5; % 5 = 500 ms
 p.trialDur = 4;
@@ -180,10 +176,11 @@ p.minSOA_frames = round(p.minSOA/p.frameDur);
 
 % Color information
 p.meanLum = 128;
-p.targContrast = p.targModulationRGB/p.meanLum; 
 p.bgCol = p.meanLum;
 p.fixCol = 255;
 p.txtCol = p.fixCol;
+p.red = [255 0 0];
+p.green = [0 255 0];
 % cue colors both ~150 cd/m2 on projector in scanner
 p.pink = [255,60,90];
 p.blue = [40,175,240];
@@ -215,7 +212,40 @@ stim.contrastSteps = [below stim.adaptContrast above];
 stim.contrastLevels = [stim.contrastSteps];
 p.nContrasts = length(stim.contrastLevels);
 [m idx] = min(abs(stim.contrastLevels - stim.adaptContrast));
-p.adaptContrastIdx = idx; 
+p.adaptContrastIdx = idx;
+
+%% initialize or load staircase structure
+
+% first behavior-only run = initialize the staircase struct
+if p.runType == 0 && p.runNum == 1
+    changeMag = 0.05;
+    ratio = 0.2845; % should converge to ~78% (see Garcia-Perez 1998 Vis Research, pg 1871)
+    staircase.upperVert = staircase_init(p.startDelta, changeMag, ratio);
+    staircase.upperHorz = staircase_init(p.startDelta, changeMag, ratio);
+    staircase.lowerVert = staircase_init(p.startDelta, changeMag, ratio);
+    staircase.lowerHorz = staircase_init(p.startDelta, changeMag, ratio);
+end
+
+% subsequent behavior-only runs = grab staircase struct from most most recent run
+if p.runType == 0 && p.runNum > 1
+    staircase_fname = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Staircase',num2str(p.runNum-1),'.mat'];
+    load(staircase_fname,'staircase');
+end
+
+% first fMRI run = grab staircase struct from final behavior-only file
+if p.runType == 1 && p.runNum == 1
+    fn = dir([data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Staircase*.mat']); % grab the files for each subject
+    [nRuns,c]=size(fn);
+    staircase_fname = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Staircase',num2str(nRuns),'.mat'];
+    load(staircase_fname,'staircase');
+end
+
+% subsequent fMRI runs = grab staircase struct from most most recent run
+if p.runType == 1 && p.runNum > 1
+    staircase_fname = [data_dir,num2str(p.subID),'_FBA_CRF_WEDGES_Run',num2str(p.runNum-1),'.mat'];
+    load(staircase_fname,'staircase');
+end
+
 
 %% Open window
 
@@ -382,22 +412,32 @@ for t = 1:stim.nTrials
     stim.nTopupFrames(t) = stim.topupDur(t)/p.frameDur;
 end
 
+% determining phase values
+stim.upperTargPhase = nan(stim.nTrials,2); % note: always saving two phases, but are't always used if 0 or 1 perturbation
+stim.lowerTargPhase = nan(stim.nTrials,2);
+stim.probePhase = nan(stim.nTrials,2);
+for t = 1:stim.nTrials
+    stim.topupPhase{t} = round((rand(1,stim.nTopupFrames(t))*(p.numPhaseSteps-1))+1);
+    stim.horzPhase{t} = round((rand(1,p.nTrialFrames)*(p.numPhaseSteps-1))+1);
+    stim.vertPhase{t} = round((rand(1,p.nTrialFrames)*(p.numPhaseSteps-1))+1);
+end
+
 % determine direction of each probe
 stim.cuedOri = nan(stim.nTrials,1);
 stim.uncuedOri = nan(stim.nTrials,1);
 % vertical probe
 if p.probeOri == 0
     stim.cuedOri(stim.condNumber <= 10) = 0; % match (attended  = vertical)
-    stim.uncuedOri(stim.condNumber <= 10) = 90; 
+    stim.uncuedOri(stim.condNumber <= 10) = 90;
     stim.cuedOri(stim.condNumber > 10) = 90;  % mismatch (attended = horizontal)
-    stim.uncuedOri(stim.condNumber > 10) = 0; 
+    stim.uncuedOri(stim.condNumber > 10) = 0;
 end
 % horizontal probe
 if p.probeOri == 90
     stim.cuedOri(stim.condNumber <= 10) = 90; % match (attended = horizontal)
     stim.uncuedOri(stim.condNumber <= 10) = 0;
     stim.cuedOri(stim.condNumber > 10) = 0;   % mismatch (attended  = vertical)
-    stim.uncuedOri(stim.condNumber > 10) = 90; 
+    stim.uncuedOri(stim.condNumber > 10) = 90;
 end
 
 % determine position of attended stimulus (upper or lower)
@@ -426,7 +466,7 @@ end
 % determine trial times
 stim.trialTimes = p.adaptDur + stim.absTimes;
 
-% 0, 1, or 2 targs equally often for each orientation, randomized independently 
+% 0, 1, or 2 targs equally often for each grating, randomized independently
 
 % number of vert targets on each trial
 tmp = [zeros(1,13),ones(1,13),2*ones(1,13),datasample(0:2,1)]; % 13 of each, plus one extra randomly determined
@@ -436,115 +476,123 @@ stim.nVertTargs = tmp(permIdx);
 tmp = [zeros(1,13),ones(1,13),2*ones(1,13),datasample(0:2,1)]; % 13 of each, plus one extra randomly determined
 permIdx = randperm(stim.nTrials);
 stim.nHorzTargs = tmp(permIdx);
+% number of probe targets on each trial
+tmp = [zeros(1,13),ones(1,13),2*ones(1,13),datasample(0:2,1)]; % 13 of each, plus one extra randomly determined
+permIdx = randperm(stim.nTrials);
+stim.nProbeTargs = tmp(permIdx);
 
-stim.nTargs = nan(1,stim.nTrials); 
+stim.nTargs = nan(1,stim.nTrials);
 stim.nTargs(stim.cuedOri == 0) = stim.nVertTargs(stim.cuedOri == 0);
-stim.nTargs(stim.cuedOri == 90) = stim.nHorzTargs(stim.cuedOri == 90); 
+stim.nTargs(stim.cuedOri == 90) = stim.nHorzTargs(stim.cuedOri == 90);
 
 % preallocate vectors to save response information
 stim.resp = zeros(1,stim.nTrials);
 stim.acc = zeros(1,stim.nTrials);
 stim.rt = nan(1,stim.nTrials);
 
+% preallocate vectors for deltas
+stim.upperDelta = nan(1,stim.nTrials);
+stim.lowerDelta = nan(1,stim.nTrials);
+stim.probeDelta = nan(1,stim.nTrials);
+
 % determine when gratings are presented
 stim.vertTarg1On = zeros(stim.nTrials,p.nTrialFrames);
 stim.vertTarg2On = zeros(stim.nTrials,p.nTrialFrames);
 stim.horzTarg1On = zeros(stim.nTrials,p.nTrialFrames);
 stim.horzTarg2On = zeros(stim.nTrials,p.nTrialFrames);
-stim.vertTarg1Frame = zeros(stim.nTrials,p.nTrialFrames);
-stim.vertTarg2Frame = zeros(stim.nTrials,p.nTrialFrames);
-stim.horzTarg1Frame = zeros(stim.nTrials,p.nTrialFrames);
-stim.horzTarg2Frame = zeros(stim.nTrials,p.nTrialFrames);
+stim.probeTarg1On = zeros(stim.nTrials,p.nTrialFrames);
+stim.probeTarg2On = zeros(stim.nTrials,p.nTrialFrames);
 
 for t = 1:stim.nTrials
-        
-    % randomly sample phase for each grating
-    stim.vertGratingPhase{t} = datasample(p.phaseSteps,2); % always generating 2 phase values, but only using both on trials with two gratings
-    stim.horzGratingPhase{t} = datasample(p.phaseSteps,2);
     
+    vertOnsets = []; horzOnsets = []; probeOnsets = [];
     
-    vertOnsets = []; horzOnsets = []; 
-    while 1
-
-        % no vert target
-        if stim.nVertTargs(t) == 0
+    % no vert target
+    if stim.nVertTargs(t) == 0
         vertOnsets = [];
-        end
-        
-        % one vert target
-        if stim.nVertTargs(t) == 1;
+    end
+    
+    % one vert target
+    if stim.nVertTargs(t) == 1;
         vertOnsets = datasample(p.targLimits_frames(1):p.targLimits_frames(2),1);
-        end
-        
-        % two vert targets
-        if stim.nVertTargs(t) == 2
+    end
+    
+    % two vert targets
+    if stim.nVertTargs(t) == 2
         targ2onset = datasample(p.targ2Limits_frames(1):p.targ2Limits_frames(2),1);
         targ1onset = datasample(p.targLimits_frames(1):targ2onset-p.minSOA_frames,1);
         vertOnsets = [targ1onset targ2onset];
-        end
-        
-        % no horz target
-        if stim.nHorzTargs(t) == 0
-            horzOnsets = [];
-        end
-        
-        % one horz target
-        if stim.nHorzTargs(t) == 1
-            horzOnsets = datasample(p.targLimits_frames(1):p.targLimits_frames(2),1);
-        end
-        
-        % two horz targets
-        if stim.nHorzTargs(t) == 2
-            targ2onset = datasample(p.targ2Limits_frames(1):p.targ2Limits_frames(2),1);
-            targ1onset = datasample(p.targLimits_frames(1):targ2onset-p.minSOA_frames,1);
-            horzOnsets = [targ1onset targ2onset];
-        end
-        
-        onsets = sort([vertOnsets, horzOnsets]);
-        
-        if length(onsets) < 2
-            minSOA = p.minSOA+100; % make minSOA bigger than p.minSOA if there is zero or one onsets
-        else
-            minSOA = calcMinSOA(onsets);
-        end
-        
-        if minSOA > p.minSOA_frames
-            break
-        end
-        
     end
+    
+    % no horz target
+    if stim.nHorzTargs(t) == 0
+        horzOnsets = [];
+    end
+    
+    % one horz target
+    if stim.nHorzTargs(t) == 1
+        horzOnsets = datasample(p.targLimits_frames(1):p.targLimits_frames(2),1);
+    end
+    
+    % two horz targets
+    if stim.nHorzTargs(t) == 2
+        targ2onset = datasample(p.targ2Limits_frames(1):p.targ2Limits_frames(2),1);
+        targ1onset = datasample(p.targLimits_frames(1):targ2onset-p.minSOA_frames,1);
+        horzOnsets = [targ1onset targ2onset];
+    end
+    
+    % no probe target
+    if stim.nProbeTargs(t) == 0
+        probeOnsets = [];
+    end
+    
+    % one probe target
+    if stim.nProbeTargs(t) == 1
+        probeOnsets = datasample(p.targLimits_frames(1):p.targLimits_frames(2),1);
+    end
+    
+    % two probe targets
+    if stim.nProbeTargs(t) == 2
+        targ2onset = datasample(p.targ2Limits_frames(1):p.targ2Limits_frames(2),1);
+        targ1onset = datasample(p.targLimits_frames(1):targ2onset-p.minSOA_frames,1);
+        probeOnsets = [targ1onset targ2onset];
+    end
+    
     
     stim.vertTargOnsets{t} = vertOnsets;
     stim.horzTargOnsets{t} = horzOnsets;
-    stim.onsets{t} = onsets;
+    stim.probeTargOnsets{t} = probeOnsets;
     
     
     if stim.nVertTargs(t) == 1
         stim.vertTarg1On(t,stim.vertTargOnsets{t}(1):stim.vertTargOnsets{t}(1)+p.targDur_frames-1) = 1;
-        stim.vertTarg1Frame(t,stim.vertTargOnsets{t}(1):stim.vertTargOnsets{t}(1)+p.targDur_frames-1) = 1:p.targDur_frames;
     end
     
     if stim.nVertTargs(t) == 2
         stim.vertTarg1On(t,stim.vertTargOnsets{t}(1):stim.vertTargOnsets{t}(1)+p.targDur_frames-1) = 1;
-        stim.vertTarg1Frame(t,stim.vertTargOnsets{t}(1):stim.vertTargOnsets{t}(1)+p.targDur_frames-1) = 1:p.targDur_frames;
         stim.vertTarg2On(t,stim.vertTargOnsets{t}(2):stim.vertTargOnsets{t}(2)+p.targDur_frames-1) = 1;
-        stim.vertTarg2Frame(t,stim.vertTargOnsets{t}(2):stim.vertTargOnsets{t}(2)+p.targDur_frames-1) = 1:p.targDur_frames;
     end
     
     if stim.nHorzTargs(t) == 1
         stim.horzTarg1On(t,stim.horzTargOnsets{t}(1):stim.horzTargOnsets{t}(1)+p.targDur_frames-1) = 1;
-        stim.horzTarg1Frame(t,stim.horzTargOnsets{t}(1):stim.horzTargOnsets{t}(1)+p.targDur_frames-1) = 1:p.targDur_frames;
     end
     
     if stim.nHorzTargs(t) == 2
         stim.horzTarg1On(t,stim.horzTargOnsets{t}(1):stim.horzTargOnsets{t}(1)+p.targDur_frames-1) = 1;
-        stim.horzTarg1Frame(t,stim.horzTargOnsets{t}(1):stim.horzTargOnsets{t}(1)+p.targDur_frames-1) = 1:p.targDur_frames;
         stim.horzTarg2On(t,stim.horzTargOnsets{t}(2):stim.horzTargOnsets{t}(2)+p.targDur_frames-1) = 1;
-        stim.horzTarg2Frame(t,stim.horzTargOnsets{t}(2):stim.horzTargOnsets{t}(2)+p.targDur_frames-1) = 1:p.targDur_frames;
+    end
+    
+    if stim.nProbeTargs(t) == 1
+        stim.probeTarg1On(t,stim.probeTargOnsets{t}(1):stim.probeTargOnsets{t}(1)+p.targDur_frames-1) = 1;
+    end
+    
+    if stim.nProbeTargs(t) == 2
+        stim.probeTarg1On(t,stim.probeTargOnsets{t}(1):stim.probeTargOnsets{t}(1)+p.targDur_frames-1) = 1;
+        stim.probeTarg2On(t,stim.probeTargOnsets{t}(2):stim.probeTargOnsets{t}(2)+p.targDur_frames-1) = 1;
     end
     
 end
-        
+
 %% Eye link setup
 
 if p.eyeTrack == 1
@@ -613,6 +661,8 @@ time.adapt.onset =  nan(stim.nAdaptFrames,1);
 time.adapt.flipstamp = nan(stim.nAdaptFrames,1);
 time.adapt.missed = nan(stim.nAdaptFrames,1);
 
+time.makeTextures = nan(stim.nTrials,1); % save time it took to make target textures
+
 time.trial.vblstamp = nan(stim.nTrials,p.nTrialFrames);
 time.trial.onset =  nan(stim.nTrials,p.nTrialFrames);
 time.trial.flipstamp = nan(stim.nTrials,p.nTrialFrames);
@@ -628,6 +678,7 @@ time.endBuffer.onset =  nan(stim.nEndBufferFrames,1);
 time.endBuffer.flipstamp = nan(stim.nEndBufferFrames,1);
 time.endBuffer.missed = nan(stim.nEndBufferFrames,1);
 
+
 %% begin task
 
 %% base adaptation period
@@ -641,10 +692,10 @@ for f = 1:p.nAdaptFrames
     Screen('FillRect',window,p.bgCol,p.bgRect);
     
     % determine phase of gratings
-     currPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
-        
-    % draw surround grating
-    Screen('DrawTexture',window, probeText{p.adaptContrastIdx,currPhase(1)},[],p.stimRect,0);
+    probePhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+    
+    % draw probe
+    Screen('DrawTexture',window, probeText{p.adaptContrastIdx,probePhase},[],p.probeRect,0);
     
     % fixation
     if ismember(f,cueFrames)
@@ -670,14 +721,37 @@ end
 
 for t = 1:stim.nTrials
     
+    % get staircase values for attended side
+    if stim.upperOri(t) == 0
+        stim.upperDelta(t) = staircase_getDelta(staircase.upperVert,p.maxDelta);
+        stim.lowerDelta(t) = staircase_getDelta(staircase.lowerHorz,p.maxDelta);
+    end
+    if stim.upperOri(t) == 90
+        stim.upperDelta(t) = staircase_getDelta(staircase.upperHorz,p.maxDelta);
+        stim.lowerDelta(t) = staircase_getDelta(staircase.lowerVert,p.maxDelta);
+    end
+    
+    % size of probe perturbation = average of all staircase values;
+    upperVert = staircase_getDelta(staircase.upperVert,p.maxDelta);
+    upperHorz = staircase_getDelta(staircase.upperHorz,p.maxDelta);
+    lowerVert = staircase_getDelta(staircase.lowerVert,p.maxDelta);
+    lowerHorz = staircase_getDelta(staircase.lowerHorz,p.maxDelta);
+    stim.probeDelta(t) = mean([upperVert, upperHorz, lowerVert, lowerHorz]);
+
+    % grab info to print to command line
+    if stim.cuedPos(t) == 1
+        delta = stim.upperDelta(t);
+    else
+        delta = stim.lowerDelta(t);
+    end
     if stim.probeContrastIdx(t) == 0
         contrast = 0;
     else
-        contrast = 100*stim.contrastLevels(stim.probeContrastIdx(t));
+        contrast = stim.contrastLevels(stim.probeContrastIdx(t));
     end
     fprintf('Trial = %.0f ,',t);
     fprintf(stim.condName{t});
-    fprintf(' , Cued position = %.0f, Targets = %.0f, Contrast = %.1f, ',stim.cuedPos(t),stim.nTargs(t),contrast)
+    fprintf(', Cued position = %.0f, Cued ori = %.0f, Delta = %.2f, Targets = %.0f, Contrast = %.1f, ',stim.cuedPos(t),stim.cuedOri(t), delta, stim.nTargs(t),100*contrast)
     trialFlipTimes = presTime.trialFlipTimes{t};
     topupFlipTimes = presTime.topupFlipTimes{t};
     PsychHID('KbQueueFlush',deviceNumber); % flush any response made before trial began
@@ -727,30 +801,66 @@ for t = 1:stim.nTrials
         
         % background
         Screen('FillRect',window,p.bgCol,p.bgRect);
-        
-        % determine phase of gratings
-        currPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
-        unattendedPhase = round((rand(1,1)*(p.numPhaseSteps-1))+1); % REVIEW
-                       
-         % draw surround grating
+               
+         % draw probe
          if stim.probeContrastIdx(t) ~= 0
-             Screen('DrawTexture',window, probeText{stim.probeContrastIdx(t),currPhase(1)},[],p.stimRect,0);
+              if stim.probeTarg1On(t,f) == 1
+                  Screen('DrawTexture',window, probeTarg{1},[],p.probeRect,0);
+              elseif stim.probeTarg2On(t,f) == 1
+                  Screen('DrawTexture',window, probeTarg{2},[],p.probeRect,0);
+              else
+                 Screen('DrawTexture',window, probeText{stim.probeContrastIdx(t),stim.horzPhase{t}(f)},[],p.probeRect,0);
+              end
          end
-         if stim.upperOri(t) == 0
-             upperOri = 1;
-             lowerOri = 2;
-             upperPhase = unattendedPhase;
-             lowerPhase = currPhase;
-         end
-         if stim.upperOri(t) == 90
-             upperOri = 2;
-             lowerOri = 1;
-             upperPhase = currPhase;
-             lowerPhase = unattendedPhase;
-         end
-         Screen('DrawTexture',window, lowerText{lowerOri,lowerPhase},[],p.stimRect,0);
-         Screen('DrawTexture',window, upperText{upperOri,upperPhase},[],p.stimRect,0);
-         
+        
+        % draw gratings on attended side
+        if stim.upperOri(t) == 0
+            upperOri = 1;
+            lowerOri = 2;
+        end
+        if stim.upperOri(t) == 90
+            upperOri = 2;
+            lowerOri = 1;
+        end
+        
+        if stim.upperOri(t) == 0
+            % vertical
+            if stim.vertTarg1On(t,f) == 1
+                Screen('DrawTexture',window, upperTarg{1},[],p.attRect,0);
+            elseif stim.vertTarg2On(t,f) == 1
+                Screen('DrawTexture',window, upperTarg{2},[],p.attRect,0);
+            else
+                Screen('DrawTexture',window, upperText{upperOri,stim.vertPhase{t}(f)},[],p.attRect,0);
+            end
+            % horizontal
+            if stim.horzTarg1On(t,f) == 1
+                Screen('DrawTexture',window, lowerTarg{1},[],p.attRect,0);
+            elseif stim.horzTarg2On(t,f) == 1
+                Screen('DrawTexture',window, lowerTarg{2},[],p.attRect,0);
+            else
+                Screen('DrawTexture',window, lowerText{lowerOri,stim.horzPhase{t}(f)},[],p.attRect,0);
+            end
+        end
+        
+        if stim.upperOri(t) == 90
+            % vertical
+            if stim.vertTarg1On(t,f) == 1
+                Screen('DrawTexture',window, lowerTarg{1},[],p.attRect,0);
+            elseif stim.vertTarg2On(t,f) == 1
+                Screen('DrawTexture',window, lowerTarg{2},[],p.attRect,0);
+            else
+                Screen('DrawTexture',window, lowerText{lowerOri,stim.vertPhase{t}(f)},[],p.attRect,0);
+            end
+            % horizontal
+            if stim.horzTarg1On(t,f) == 1
+                Screen('DrawTexture',window, upperTarg{1},[],p.attRect,0);
+            elseif stim.horzTarg2On(t,f) == 1
+                Screen('DrawTexture',window, upperTarg{2},[],p.attRect,0);
+            else
+                Screen('DrawTexture',window, upperText{upperOri,stim.horzPhase{t}(f)},[],p.attRect,0);
+            end
+        end
+        
         % fixation dot
         if stim.cuedPos(t) == 1
             cueCol = p.upperCueCol;
@@ -778,6 +888,8 @@ for t = 1:stim.nTrials
     
     respStartTime = GetSecs;
     responseDeadline = respStartTime + p.responseWindow;
+    feedbackStart = responseDeadline;
+    feedbackStop = feedbackStart + p.feedbackDur;
     cueFrames = stim.nTopupFrames(t)-p.nCueFrames:stim.nTopupFrames(t);
     
     for f = 1:stim.nTopupFrames(t)
@@ -785,24 +897,28 @@ for t = 1:stim.nTrials
         % background
         Screen('FillRect',window,p.bgCol,p.bgRect);
         
-        % probe stimulus
-            currPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
-      
-        % draw surround grating
-        Screen('DrawTexture',window, probeText{p.adaptContrastIdx,currPhase(1)},[],p.stimRect,0);
+       
+        % draw probe
+        Screen('DrawTexture',window, probeText{p.adaptContrastIdx,stim.topupPhase{t}(f)},[],p.probeRect,0);
         
         % fixation dot
-        if ismember(f,cueFrames) && t < stim.nTrials
+        if ismember(f,cueFrames) && t < stim.nTrials % if cue period, grab cue color
             if stim.cuedPos(t+1) == 1
-                cueCol = p.upperCueCol;
+                fixCol = p.upperCueCol;
             end
             if stim.cuedPos(t+1) == 2
-                cueCol = p.lowerCueCol;
+                fixCol = p.lowerCueCol;
             end
-            Screen('FillOval',window,cueCol,p.fixRect);
-        else
-            Screen('FillOval',window,p.fixCol,p.fixRect);
+        elseif GetSecs > feedbackStart && GetSecs <= feedbackStop % if feedback period, grab feedback color
+            if stim.acc(t) == 1
+                fixCol = p.green;
+            else
+                fixCol = p.red;
+            end
+        else % otherwise, usual fixation color
+            fixCol = p.fixCol;
         end
+        Screen('FillOval',window,fixCol,p.fixRect);
         
         Screen('DrawingFinished',window);
         
@@ -833,6 +949,21 @@ for t = 1:stim.nTrials
                 end
                 fprintf(' Resp = %0.f, Acc = %.0f\n',stim.resp(t),stim.acc(t));
                 responseDeadline = nan; % set responseDeadline to a nan
+                
+                % update staircase
+                if stim.cuedPos(t) == 1 && stim.cuedOri(t) == 0
+                    staircase.upperVert = staircase_update(staircase.upperVert,stim.upperDelta(t),stim.acc(t));
+                end
+                if stim.cuedPos(t) == 1 && stim.cuedOri(t) == 90
+                    staircase.upperHorz = staircase_update(staircase.upperHorz,stim.upperDelta(t),stim.acc(t));
+                end
+                if stim.cuedPos(t) == 2 && stim.cuedOri(t) == 0
+                    staircase.lowerVert = staircase_update(staircase.lowerVert,stim.lowerDelta(t),stim.acc(t));
+                end
+                if stim.cuedPos(t) == 2 && stim.cuedOri(t) == 90
+                    staircase.lowerHorz = staircase_update(staircase.lowerHorz,stim.lowerDelta(t),stim.acc(t));
+                end
+                
             end
             
             % check for response if haven't hit the response deadline
@@ -864,9 +995,9 @@ for t = 1:stim.nTrials
             end
             
         end
-
+        
     end
-     
+    
 end
 
 %% final null period
@@ -876,11 +1007,11 @@ for f = 1:stim.nEndBufferFrames
     % background
     Screen('FillRect',window,p.bgCol,p.bgRect);
     
-    % determine phase of gratings
-    currPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+    % determine phase
+    probePhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
     
     % draw surround grating
-    Screen('DrawTexture',window, probeText{p.adaptContrastIdx,currPhase(1,1)},[],p.stimRect,0);
+    Screen('DrawTexture',window, probeText{p.adaptContrastIdx,probePhase(1,1)},[],p.probeRect,0);
     
     % fixation
     Screen('FillOval',window,p.fixCol,p.fixRect);
