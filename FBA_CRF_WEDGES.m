@@ -81,15 +81,15 @@ if p.setup == 0 % My Macbook Pro
     w.screenHeightPixels = 900;
     w.ScreenSizePixels = Screen('Rect', w.whichScreen);
 end
-if p.setup == 1 % Display++ for staircase session
+if p.setup == 1 % Display++ for staircase session in Room 209
     w.whichScreen = 0;
     deviceString = 'Apple Keyboard'; % for both trigger and response box
     p.keyPressNumbers = [KbName('1') KbName('2')];
-    w.refreshRate = 120;
-    w.screenWidth = 70;     % screen width in cm (previously 43 cm)
-    w.vDist = 83;           % viewing distance (previously 102 cm)
-    w.screenWidthPixels = 1920;
-    w.screenHeightPixels = 1080; 
+    w.refreshRate = 100;
+    w.screenWidth = 52;      % screen width in cm
+    w.vDist = 135;           % viewing distance
+    w.screenWidthPixels = 1440;
+    w.screenHeightPixels = 1080;
     PsychImaging('PrepareConfiguration');
     PsychImaging('AddTask', 'General', 'FloatingPoint32BitIfPossible');
     w.ScreenSizePixels = Screen('Rect', w.whichScreen);
