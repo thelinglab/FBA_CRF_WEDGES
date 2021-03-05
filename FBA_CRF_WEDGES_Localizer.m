@@ -412,19 +412,18 @@ responseDeadline = nan;
 for f = 1:p.nFrames
         
     %% determine phase of gratings
-    currPhases=round((rand(p.numEccen,p.numGratings)*(p.numPhaseSteps-1))+1);
+    upperPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+    lowerPhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
+    probePhase=round((rand(1,1)*(p.numPhaseSteps-1))+1);
         
     %% background
     Screen('FillRect',window,p.bgCol,p.bgRect);
     
     %% gratings
-    if stim.stimOn(f) == 1
-        for e=1:p.numEccen
-            for ps=1:p.numGratings
-                texture = gaborTexture{e,stim.ori(f),currPhases(e,ps)};
-                Screen('DrawTexture',window,texture,[],p.petalCoords{e,ps},0);
-            end
-        end
+    if stim.stimOn(f) == 1      
+        Screen('DrawTexture',window, upperText{upperPhase},[],p.attRect,0);
+        Screen('DrawTexture',window, lowerText{lowerPhase},[],p.attRect,0);
+        Screen('DrawTexture',window, probeText{probePhase},[],p.probeRect,0);
     end
 
      %% aperture and fixation
