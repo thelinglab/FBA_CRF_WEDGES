@@ -967,5 +967,5 @@ PsychHID('KbQueueStop', deviceNumber);
 ShowCursor;
 Priority(0);
 
-% print delta for the run
+% print overall accuracy for the run
 fprintf('Accuracy =  %.2f \n',100*mean(stim.acc));
