@@ -148,11 +148,8 @@ p.fontSize = 40;
 p.numPhaseSteps = 90;  % number of steps between 0 and 360 degrees, more increases load time
 
 % orientations
-p.oris = [0 90]; 
-if ~ismember(p.probeOri,p.oris)
-    error('p.probeOri is not valid')
-end
-p.nonProbeOri = p.oris(p.oris ~= p.probeOri);
+p.oris = [0 90]; % 0 = vertical, 90 = horizontal
+p.probeOri = 90; % probe is always horizontal
 
 % Timing
 p.refreshRate = w.refreshRate;
