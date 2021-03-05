@@ -947,7 +947,7 @@ wake.WakefullnessLabels = fliplr(targText);
 %% Clean up
 
 % save the data
-save(fName,'p','w','stim','presTime','time','wake');
+save(fName,'p','w','stim','presTime','time','staircase','wake');
 
 if p.eyeTrack == 1
     % reset so tracker uses default calibration for other experiments
