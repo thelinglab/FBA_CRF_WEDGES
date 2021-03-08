@@ -590,14 +590,13 @@ end
 if p.eyeTrack == 1
     
     if p.runType == 0
-        edfFileFinal = [num2str(p.subID),'_FBA_CRF_WEDGES_Staircase',num2str(p.runNum),'.edf'];
+        edf_filename = [p.subID,'S',num2str(p.runNum),'.edf'];
     end
     if p.runType == 1
+        edf_filename = 'tmp.edf';
         edfFileFinal = [num2str(p.subID),'_FBA_CRF_WEDGES_Run',num2str(p.runNum),'.edf'];
     end
-    
-    edf_filename = 'tmp.edf';
-    
+        
     [el] = eyeTrackingOn_500Hz(window, edf_filename, p.bgRect, p.eyeRect, w.ppd, p.bgCol, p.txtCol);
     Screen('Flip', window);
 end
@@ -1079,7 +1078,9 @@ if p.eyeTrack == 1
     Eyelink('command', ['screen_pixel_coords' num2str(w.ScreenSizePixels)])
     Eyelink('StopRecording');
     Eyelink('CloseFile');
-    transferEDF(edf_filename,edfFileFinal)
+    if p.runType == 1 % only do this in scanner (doesn't work on linux machine for staircasing)
+        transferEDF(edf_filename,edfFileFinal)
+    end
 end
 
 % restore clut
