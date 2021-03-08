@@ -8,14 +8,6 @@ function FBA_CRF_WEDGES
 % jjfoster@bu.edu
 % Boston University
 
-% issues to resolve:
-% is eye tracking approach at CNC working - do data files look okay?
-% handle eye tracking files different for staircase?
-% update viewing distance etc. for room 209?
-%
-% lower priority
-% save phase values
-
 clear all
 
 p.subID = 'S100';
@@ -26,7 +18,7 @@ p.cueCB = 1; % 1 = pink: attend upper, 2 = pink: attend lower
 p.eyeTrack = 0;
 p.setup = 0; % 0 = my macbook, 1 = Display++, 2 = scanner at imaging center
 p.maxDelta = 0.50;
-p.startDelta = 0.10; % pretty easy to see % REVIEW
+p.startDelta = 0.10;
 echo off
 KbName('UnifyKeyNames')
 Screen('Preference', 'SkipSyncTests', 1);
