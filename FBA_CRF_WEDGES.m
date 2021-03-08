@@ -783,7 +783,7 @@ for t = 1:stim.nTrials
         
     end
     
-    time.makeTextures(s) = toc; % save time, so I can check that it didn't disrupt flip times
+    time.makeTextures(t) = toc; % save time, so I can check that it didn't disrupt flip times
     
     
     %% trial period
