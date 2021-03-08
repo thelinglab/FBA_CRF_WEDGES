@@ -17,8 +17,8 @@ p.probeSide = 2; % 1 = irrelevant probe on left, 2 = probe on right
 p.cueCB = 1; % 1 = pink: attend upper, 2 = pink: attend lower
 p.eyeTrack = 0;
 p.setup = 0; % 0 = my macbook, 1 = Display++, 2 = scanner at imaging center
-p.maxDelta = 0.50;
-p.startDelta = 0.10;
+p.maxDelta = 0.8;
+p.startDelta = 0.50;
 echo off
 KbName('UnifyKeyNames')
 Screen('Preference', 'SkipSyncTests', 1);
