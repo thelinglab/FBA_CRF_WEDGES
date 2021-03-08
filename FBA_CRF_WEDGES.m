@@ -73,7 +73,7 @@ if p.setup == 0 % My Macbook Pro
 end
 if p.setup == 1 % Display++ for staircase session in Room 209
     w.whichScreen = 0;
-    deviceString = 'Apple Keyboard'; % for both trigger and response box
+    deviceString = 'Logitech USB Keyboard'; % for both trigger and response box
     p.keyPressNumbers = [KbName('1') KbName('2')];
     w.refreshRate = 100;
     w.screenWidth = 52;      % screen width in cm
