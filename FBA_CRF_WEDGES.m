@@ -144,7 +144,7 @@ p.refreshRate = w.refreshRate;
 p.refreshCycle = 1/p.refreshRate;
 p.frameRate = 10; % # of frames per second
 p.frameDur = 1/p.frameRate;
-p.adaptDur = 5; % duration of baseline adaptation
+p.adaptDur = 60; % duration of baseline adaptation
 p.nAdaptFrames = p.adaptDur/p.frameDur;
 p.nCueFrames = 5; % 5 = 500 ms
 p.trialDur = 4;
