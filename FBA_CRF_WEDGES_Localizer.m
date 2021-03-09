@@ -117,7 +117,7 @@ p.gapSize = 0.5*w.ppd; % size of gap between gratings on attended side
 p.rolloffSD = 0.1*w.ppd;
 p.eyeBoxSize = round(2.5*w.ppd);
 p.fontSize = 40;
-p.numPhaseSteps = 90;               % number of steps between 0 and 360 degrees, more increases load time
+p.numPhaseSteps = 90; % number of steps between 0 and 360 degrees, more increases load time
 p.ori = 90;
 
 
@@ -530,7 +530,6 @@ if p.eyeTrack == 1
     Eyelink('Command', 'set_idle_mode');
     Eyelink('command', ['screen_pixel_coords' num2str(w.ScreenSizePixels)])
     Eyelink('StopRecording');
-%     Eyelink('ReceiveFile',edf_filename);
     Eyelink('CloseFile');
     transferEDF(edf_filename,edfFileFinal) 
 end
