@@ -109,7 +109,7 @@ addpath(StaircaseFunctionsDir);
 
 % stimulus dimensions
 p.fixSize = round(0.2*w.ppd);
-p.SF = 1.5; % spatial frequency
+p.SF = 2.2; % spatial frequency
 p.gratingOuterAng = 70; % how far vertical boundaries are from horizontal meridian
 p.gratingInnerEdge = 1.0*w.ppd;
 p.gratingOuterEdge = 8.5*w.ppd;
